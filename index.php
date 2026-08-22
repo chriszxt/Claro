@@ -1,75 +1,120 @@
+<?php
+session_start();
+
+if (!isset($_SESSION["id_cliente"])) {
+    header("Location: login.php");
+    exit;
+}
+
+include "conexao.php";
+
+$id = $_SESSION["id_cliente"];
+$nome = $_SESSION["nome"];
+
+/* PROTOCOLOS */
+$sql = "SELECT chamado.*
+        FROM chamado
+        INNER JOIN abre ON chamado.id_chamado = abre.id_chamado
+        WHERE abre.id_cliente = ?
+        ORDER BY chamado.id_chamado DESC";
+
+$stmt = $conexao->prepare($sql);
+$stmt->bind_param("i", $id);
+$stmt->execute();
+$protocolos = $stmt->get_result();
+
+/* VISITAS */
+$sql = "SELECT agendamento.id_agendamento
+        FROM agendamento
+        INNER JOIN gera
+        ON agendamento.id_agendamento = gera.id_agendamento
+        INNER JOIN abre
+        ON gera.id_chamado = abre.id_chamado
+        WHERE abre.id_cliente = ?";
+
+$stmt = $conexao->prepare($sql);
+$stmt->bind_param("i", $id);
+$stmt->execute();
+$agendamento = $stmt->get_result();
+
+/* ATENDIMENTOS FINALIZADOS */
+$sql = "SELECT chamado.id_chamado
+        FROM chamado
+        INNER JOIN abre
+        ON chamado.id_chamado = abre.id_chamado
+        WHERE abre.id_cliente = ?
+        AND chamado.status = 'finalizado'";
+
+$stmt = $conexao->prepare($sql);
+$stmt->bind_param("i", $id);
+$stmt->execute();
+$atendimentos = $stmt->get_result();
+?>
+
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8">
     <title>Claro | Atendimento Digital</title>
 
-    <link rel="stylesheet" href="./style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+
+    <link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
 
 <body>
 
-<header>
-    Claro | Atendimento Digital
-</header>
+<header>Atendimento Digital</header>
 
 <nav>
-    <a href="index.php">
-        <i class="fa-solid fa-house"></i>
-        Painel
-    </a>
 
-    <a href="faturas.php">
-        <i class="fa-regular fa-newspaper"></i>
-        Faturas
+    <a href="index.php">
+        <i class="fa-solid fa-sliders"></i> Painel
     </a>
 
     <a href="protocolos.php">
-        <i class="fa-solid fa-headset"></i>
-        Protocolos
+        <i class="fa-solid fa-file-lines"></i> Protocolos
     </a>
 
     <a href="agendamento.php">
-        <i class="fa-regular fa-calendar"></i>
-        Visitas
+        <i class="fa-regular fa-calendar"></i> Visitas
     </a>
 
     <a href="historico.php">
-        <i class="fa-solid fa-clock-rotate-left"></i>
-        Histórico
+        <i class="fa-regular fa-calendar-days"></i> Histórico
     </a>
 
     <a href="perfil.php">
-        <i class="fa-regular fa-user"></i>
-        Perfil
+        <i class="fa-regular fa-address-card"></i> Perfil
     </a>
+
+    <a href="logout.php">
+        <i class="fa-solid fa-right-from-bracket"></i> Logout
+    </a>
+
 </nav>
 
 <main>
 
-    <h1>Olá, Christian!</h1>
+    <h1>Olá, <?php echo htmlspecialchars($nome); ?>!</h1>
 
     <div class="cards">
 
         <div class="card">
-            <h3>Faturas em aberto</h3>
-            <h2>R$ 256,80</h2>
-        </div>
-
-        <div class="card">
             <h3>Protocolos abertos</h3>
-            <h2>2</h2>
+            <h2><?php echo $protocolos->num_rows; ?></h2>
         </div>
 
         <div class="card">
             <h3>Visitas agendadas</h3>
-            <h2>1</h2>
+            <h2><?php echo $agendamento->num_rows; ?></h2>
         </div>
 
         <div class="card">
             <h3>Atendimentos</h3>
-            <h2>5</h2>
+            <h2><?php echo $atendimentos->num_rows; ?></h2>
         </div>
 
     </div>
@@ -84,23 +129,21 @@
             <th>Status</th>
         </tr>
 
-        <tr>
-            <td>#1025</td>
-            <td>Instalação de internet</td>
-            <td>Aberto</td>
-        </tr>
+        <?php while ($p = $protocolos->fetch_assoc()) { ?>
 
         <tr>
-            <td>#1023</td>
-            <td>Falha na conexão</td>
-            <td>Em andamento</td>
+            <td>#<?php echo $p["id_chamado"]; ?></td>
+
+            <td>
+                <?php echo htmlspecialchars($p["descricao"]); ?>
+            </td>
+
+            <td>
+                <?php echo $p["status"]; ?>
+            </td>
         </tr>
 
-        <tr>
-            <td>#1018</td>
-            <td>Problema no aplicativo</td>
-            <td>Finalizado</td>
-        </tr>
+        <?php } ?>
 
     </table>
 
